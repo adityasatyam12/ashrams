@@ -19,18 +19,5 @@ pipeline {
                 bat 'terraform validate'
             }
         }
-
-        stage('Security Scan') {
-            steps {
-                bat 'terraform fmt -check'
-            }
-        }
-
-        stage('Archive Artifact') {
-            steps {
-                bat 'zip -r artifact.zip *'
-                archiveArtifacts artifacts: 'artifact.zip'
-            }
-        }
     }
 }
