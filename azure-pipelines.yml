@@ -1,7 +1,7 @@
 trigger: none
 
 pool:
-  name: 'Default'  # Microsoft-hosted agent
+  name: 'Default'
 
 stages:
 
@@ -15,14 +15,7 @@ stages:
 
     - checkout: self
 
-    # Optional: Check Terraform version
-    - task: PowerShell@2
-      displayName: Terraform Version
-      inputs:
-        targetType: 'inline'
-        script: terraform --version
-
-    # Terraform Init
+    # Terraform Init (must be run first!)
     - task: PowerShell@2
       displayName: Terraform Init
       inputs:
@@ -30,7 +23,7 @@ stages:
         script: |
           terraform init
 
-    # Terraform Plan with variables from pipeline
+    # Terraform Plan
     - task: PowerShell@2
       displayName: Terraform Plan
       inputs:
@@ -66,6 +59,15 @@ stages:
 
     - checkout: self
 
+    # Terraform Init AGAIN in apply stage (required!)
+    - task: PowerShell@2
+      displayName: Terraform Init
+      inputs:
+        targetType: 'inline'
+        script: |
+          terraform init
+
+    # Terraform Apply
     - task: PowerShell@2
       displayName: Terraform Apply
       inputs:
