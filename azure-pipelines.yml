@@ -1,10 +1,6 @@
-trigger: none
+
 
 stages:
-
-# ===============================
-# STAGE 1 — TERRAFORM INIT & PLAN
-# ===============================
 - stage: TerraformPlan
   displayName: "Terraform Init & Plan"
   jobs:
@@ -13,26 +9,24 @@ stages:
     pool:
       name: 'Default'
     steps:
-
     - checkout: self
 
     - task: AzureCLI@2
       displayName: "Terraform Init & Plan"
       inputs:
         azureSubscription: "AshramsConnect"
-        scriptType: "bash"
-        scriptLocation: "inlineScript"
+        scriptType: pscore
+        scriptLocation: inlineScript
         inlineScript: |
-          echo "=== Terraform Init ==="
+          Write-Host "=== Terraform Init ==="
           terraform init
 
-          echo "=== Terraform Validate ==="
+          Write-Host "=== Terraform Validate ==="
           terraform validate
 
-          echo "=== Terraform Plan ==="
-          terraform plan -out tfplan
+          Write-Host "=== Terraform Plan ==="
+          terraform plan -out=tfplan
 
-    # Publish plan file so you can view it later
     - task: PublishBuildArtifacts@1
       displayName: "Upload Terraform Plan Output"
       inputs:
@@ -40,36 +34,33 @@ stages:
         ArtifactName: "tfplan"
         publishLocation: "Container"
 
-
-# ===============================
-# STAGE 2 — TERRAFORM APPLY
-# (Manual approval recommended)
-# ===============================
 - stage: TerraformApply
   displayName: "Terraform Apply"
-  dependsOn: TerraformPlan
+  dependsOn:
+  - TerraformPlan
   jobs:
   - job: Apply
     displayName: "Run Terraform Apply"
     pool:
       name: 'Default'
     steps:
-
     - checkout: self
+
+    - task: DownloadBuildArtifacts@0
+      displayName: "Download Terraform Plan"
+      inputs:
+        artifactName: "tfplan"
+        downloadPath: "$(System.DefaultWorkingDirectory)"
 
     - task: AzureCLI@2
       displayName: "Terraform Apply"
       inputs:
         azureSubscription: "AshramsConnect"
-        scriptType: "bash"
-        scriptLocation: "inlineScript"
+        scriptType: pscore
+        scriptLocation: inlineScript
         inlineScript: |
-          echo "=== Terraform Init ==="
+          Write-Host "=== Terraform Init ==="
           terraform init
 
-          echo "=== Download Terraform Plan ==="
-          # OPTIONAL: If using published plan
-          # curl -O $(System.ArtifactsDirectory)/tfplan/tfplan
-
-          echo "=== Terraform Apply ==="
-          terraform apply -auto-approve
+          Write-Host "=== Terraform Apply ==="
+          terraform apply -auto-approve tfplan
