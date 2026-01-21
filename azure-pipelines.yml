@@ -1,66 +1,73 @@
+trigger: none
 
+pool:
+  name: 'Default'  # or 'Default' if using self-hosted agent
+
+variables:
+  terraformVersion: '1.6.6'
 
 stages:
-- stage: TerraformPlan
-  displayName: "Terraform Init & Plan"
+
+# ---------------- INIT & PLAN ----------------
+- stage: Terraform_Plan
+  displayName: Terraform Init & Plan
   jobs:
   - job: Plan
-    displayName: "Run Terraform Init & Plan"
-    pool:
-      name: 'Default'
+    displayName: Terraform Plan
     steps:
+
     - checkout: self
 
-    - task: AzureCLI@2
-      displayName: "Terraform Init & Plan"
+    # Optional: Check Terraform version
+    - task: PowerShell@2
+      displayName: Terraform Version
       inputs:
-        azureSubscription: "AshramsConnect"
-        scriptType: pscore
-        scriptLocation: inlineScript
-        inlineScript: |
-          Write-Host "=== Terraform Init ==="
+        targetType: 'inline'
+        script: terraform --version
+
+    # Terraform Init
+    - task: PowerShell@2
+      displayName: Terraform Init
+      inputs:
+        targetType: 'inline'
+        script: |
           terraform init
 
-          Write-Host "=== Terraform Validate ==="
-          terraform validate
-
-          Write-Host "=== Terraform Plan ==="
-          terraform plan -out=tfplan
-
-    - task: PublishBuildArtifacts@1
-      displayName: "Upload Terraform Plan Output"
+    # Terraform Plan
+    - task: PowerShell@2
+      displayName: Terraform Plan
       inputs:
-        PathtoPublish: "tfplan"
-        ArtifactName: "tfplan"
-        publishLocation: "Container"
+        targetType: 'inline'
+        script: |
+          terraform plan
 
-- stage: TerraformApply
-  displayName: "Terraform Apply"
-  dependsOn:
-  - TerraformPlan
+# ---------------- MANUAL APPROVAL ----------------
+- stage: Approval
+  displayName: Manual Approval
+  dependsOn: Terraform_Plan
+  jobs:
+  - job: ApprovalJob
+    pool: server
+    steps:
+    - task: ManualValidation@0
+      inputs:
+        instructions: 'Approve Terraform Apply?'
+        timeoutInMinutes: 1440
+
+# ---------------- APPLY ----------------
+- stage: Terraform_Apply
+  displayName: Terraform Apply
+  dependsOn: Approval
   jobs:
   - job: Apply
-    displayName: "Run Terraform Apply"
-    pool:
-      name: 'Default'
+    displayName: Terraform Apply
     steps:
+
     - checkout: self
 
-    - task: DownloadBuildArtifacts@0
-      displayName: "Download Terraform Plan"
+    - task: PowerShell@2
+      displayName: Terraform Apply
       inputs:
-        artifactName: "tfplan"
-        downloadPath: "$(System.DefaultWorkingDirectory)"
-
-    - task: AzureCLI@2
-      displayName: "Terraform Apply"
-      inputs:
-        azureSubscription: "AshramsConnect"
-        scriptType: pscore
-        scriptLocation: inlineScript
-        inlineScript: |
-          Write-Host "=== Terraform Init ==="
-          terraform init
-
-          Write-Host "=== Terraform Apply ==="
-          terraform apply -auto-approve tfplan
+        targetType: 'inline'
+        script: |
+          terraform apply -auto-approve
