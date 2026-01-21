@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master', url: 'https://dev.azure.com/azlab18cbe/_git/ashrams.git'
+                git branch: 'master', url: 'https://github.com/adityasatyam12/ashrams.git'
             }
         }
 
